@@ -46,6 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
       if (session) {
+        setIsLoading(true);
         await checkIfNewUser(session.user.id);
       } else {
         setIsNewUser(false);
@@ -79,9 +80,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function completeOnboarding() {
     if (!session) return;
-    await supabase
+    const { error } = await supabase
       .from("profiles")
       .upsert({ id: session.user.id, onboarded: true });
+    if (error) {
+      throw error;
+    }
     setIsNewUser(false);
   }
 

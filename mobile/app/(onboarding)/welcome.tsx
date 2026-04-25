@@ -1,14 +1,24 @@
+import { useState } from "react";
 import { useRouter } from "expo-router";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { useAuth } from "../../lib/auth-context";
 
 export default function Welcome() {
   const router = useRouter();
   const { completeOnboarding } = useAuth();
+  const [submitting, setSubmitting] = useState(false);
 
   async function handleComplete() {
-    await completeOnboarding();
-    router.replace("/(app)/home");
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      await completeOnboarding();
+      router.replace("/(app)/home");
+    } catch (e: any) {
+      Alert.alert("Error", e?.message ?? "Could not finish onboarding.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
