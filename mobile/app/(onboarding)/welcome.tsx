@@ -8,7 +8,7 @@ export default function Welcome() {
 
   async function handleComplete() {
     await completeOnboarding();
-    router.replace("/(app)/home");
+    router.replace("/(app)/(tabs)/home");
   }
 
   return (

@@ -19,7 +19,7 @@ function RootLayoutNav() {
     } else if (session && isNewUser && !inOnboardingGroup) {
       router.replace("/(onboarding)/welcome");
     } else if (session && !isNewUser && !inAppGroup) {
-      router.replace("/(app)/home");
+      router.replace("/(app)/(tabs)/home");
     }
   }, [session, isLoading, isNewUser, segments]);
 
