@@ -1,11 +1,21 @@
+import { useRouter } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { supabase } from "../../lib/supabase";
 
 export default function Home() {
+  const router = useRouter();
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Home</Text>
       <Text style={styles.body}>You're in! This is the main app.</Text>
+
+      <Pressable
+        style={styles.createButton}
+        onPress={() => router.push("/(app)/create-album")}
+      >
+        <Text style={styles.createButtonText}>+ Create album</Text>
+      </Pressable>
 
       <Pressable
         style={styles.signOut}
@@ -34,6 +44,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#666",
     marginBottom: 32,
+  },
+  createButton: {
+    backgroundColor: "#000",
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  createButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
   },
   signOut: {
     paddingVertical: 12,
