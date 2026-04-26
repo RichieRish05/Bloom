@@ -14,8 +14,19 @@ export type CloudinaryUploadResult = {
   height: number;
   format: string;
   tags?: string[];
-  info?: {
-    quality_analysis?: { aggregate?: number };
+  quality_analysis?: {
+    focus?: number;
+    aggregate?: number;
+    noise?: number;
+    contrast?: number;
+    exposure?: number;
+    saturation?: number;
+    lighting?: number;
+    pixelate?: number;
+    jpeg_quality?: number;
+    jpeg_chroma?: number;
+    resolution?: number;
+    color_score?: number;
   };
 };
 
@@ -57,4 +68,41 @@ export async function uploadToCloudinary(
     );
   }
   return res.json();
+}
+
+export type CommitImageInput = {
+  public_id: string;
+  secure_url: string;
+  width: number;
+  height: number;
+  format: string;
+  quality_score?: number;
+};
+
+export type CommitResult = {
+  committed: Array<{ public_id: string; image_id: string }>;
+};
+
+export function toCommitInput(r: CloudinaryUploadResult): CommitImageInput {
+  return {
+    public_id: r.public_id,
+    secure_url: r.secure_url,
+    width: r.width,
+    height: r.height,
+    format: r.format,
+    quality_score: r.quality_analysis?.aggregate ?? r.quality_analysis?.focus,
+  };
+}
+
+export async function commitUploads(
+  albumId: string,
+  images: CommitImageInput[],
+): Promise<CommitResult> {
+  const { data, error } = await supabase.functions.invoke<CommitResult>(
+    "uploads-commit",
+    { body: { album_id: albumId, images } },
+  );
+  if (error) throw error;
+  if (!data) throw new Error("No commit response");
+  return data;
 }

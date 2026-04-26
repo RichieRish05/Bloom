@@ -1,13 +1,36 @@
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { AlbumCover } from "../../../components/AlbumCover";
+import { useAuth } from "../../../lib/auth-context";
+import { supabase } from "../../../lib/supabase";
 
 const PAPER = "#FFFDF8";
 const INK = "#2A241B";
 const MUTED = "#7A6F5E";
 const ACCENT = "#C8841C";
 
+type Album = {
+  id: string;
+  name: string;
+};
+
 export default function Home() {
   const router = useRouter();
+  const { session } = useAuth();
+  const [albums, setAlbums] = useState<Album[]>([]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!session) return;
+      supabase
+        .from("albums")
+        .select("id, name")
+        .eq("created_by", session.user.id)
+        .order("created_at", { ascending: false })
+        .then(({ data }) => setAlbums(data ?? []));
+    }, [session])
+  );
 
   return (
     <View style={styles.screen}>
@@ -26,14 +49,34 @@ export default function Home() {
           <Text style={styles.ctaText}>+  Create new album</Text>
         </Pressable>
 
-        <View style={styles.empty}>
-          <View style={styles.emptyMark} />
-          <Text style={styles.emptyTitle}>Nothing here yet</Text>
-          <Text style={styles.emptyBody}>
-            Start an album above to gather photos, notes, and the people who
-            were there.
-          </Text>
-        </View>
+        {albums.length === 0 ? (
+          <View style={styles.empty}>
+            <View style={styles.emptyMark} />
+            <Text style={styles.emptyTitle}>Nothing here yet</Text>
+            <Text style={styles.emptyBody}>
+              Start an album above to gather photos, notes, and the people who
+              were there.
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.grid}>
+            {albums.map((album) => (
+              <Pressable
+                key={album.id}
+                style={({ pressed }) => [
+                  styles.gridItem,
+                  pressed && styles.gridItemPressed,
+                ]}
+                onPress={() => router.push(`/(app)/album/${album.id}`)}
+              >
+                <AlbumCover name={album.name} size={150} />
+                <Text style={styles.albumName} numberOfLines={1}>
+                  {album.name}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -107,5 +150,23 @@ const styles = StyleSheet.create({
     lineHeight: 21,
     color: MUTED,
     maxWidth: 320,
+  },
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    rowGap: 24,
+  },
+  gridItem: {
+    width: "48%",
+  },
+  gridItemPressed: {
+    opacity: 0.7,
+  },
+  albumName: {
+    marginTop: 10,
+    fontSize: 15,
+    fontWeight: "600",
+    color: INK,
   },
 });

@@ -1,7 +1,7 @@
 // Dev-only screen for smoke-testing the Cloudinary upload flow end-to-end.
 // Safe to delete once the real upload UI exists.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -10,15 +10,19 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import {
+  commitUploads,
   getUploadContext,
+  toCommitInput,
   uploadToCloudinary,
   type CloudinaryUploadResult,
   type UploadContext,
 } from "../../lib/uploads";
+import { supabase } from "../../lib/supabase";
 
 type Status = "pending" | "uploading" | "done" | "error";
 
@@ -37,9 +41,26 @@ const CONCURRENCY = 3;
 export default function DevUploads() {
   const [items, setItems] = useState<UploadItem[]>([]);
   const [running, setRunning] = useState(false);
+  const [albumId, setAlbumId] = useState("");
+
+  useEffect(() => {
+    supabase
+      .from("albums")
+      .select("id")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.id) setAlbumId(data.id);
+      });
+  }, []);
 
   async function onPickAndUpload() {
     if (running) return;
+    if (!albumId) {
+      Alert.alert("Album required", "Enter an album UUID before uploading.");
+      return;
+    }
 
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
@@ -65,9 +86,13 @@ export default function DevUploads() {
     setItems((prev) => [...newItems, ...prev]);
 
     setRunning(true);
+    const results: CloudinaryUploadResult[] = [];
     try {
-      const ctx = await getUploadContext("test-album");
-      await runWithLimit(newItems, CONCURRENCY, (item) => uploadOne(ctx, item));
+      const ctx = await getUploadContext(albumId);
+      await runWithLimit(newItems, CONCURRENCY, async (item) => {
+        const r = await uploadOne(ctx, item);
+        if (r) results.push(r);
+      });
     } catch (e: any) {
       Alert.alert(
         "Could not get upload context",
@@ -80,12 +105,25 @@ export default function DevUploads() {
             : it,
         ),
       );
-    } finally {
       setRunning(false);
+      return;
     }
+
+    if (results.length > 0) {
+      try {
+        const res = await commitUploads(albumId, results.map(toCommitInput));
+        Alert.alert("Committed", `${res.committed.length} image(s) saved.`);
+      } catch (e: any) {
+        Alert.alert("Commit failed", e?.message ?? "Unknown error");
+      }
+    }
+    setRunning(false);
   }
 
-  async function uploadOne(ctx: UploadContext, item: UploadItem) {
+  async function uploadOne(
+    ctx: UploadContext,
+    item: UploadItem,
+  ): Promise<CloudinaryUploadResult | null> {
     setItems((prev) =>
       prev.map((it) =>
         it.id === item.id ? { ...it, status: "uploading" } : it,
@@ -103,6 +141,7 @@ export default function DevUploads() {
           it.id === item.id ? { ...it, status: "done", result } : it,
         ),
       );
+      return result;
     } catch (e: any) {
       setItems((prev) =>
         prev.map((it) =>
@@ -111,6 +150,7 @@ export default function DevUploads() {
             : it,
         ),
       );
+      return null;
     }
   }
 
@@ -125,6 +165,16 @@ export default function DevUploads() {
     <View style={styles.container}>
       <Text style={styles.title}>Upload tester</Text>
       <Text style={styles.body}>Multi-select photos to upload via Cloudinary.</Text>
+
+      <TextInput
+        style={styles.albumInput}
+        placeholder="Album UUID"
+        value={albumId}
+        onChangeText={setAlbumId}
+        autoCapitalize="none"
+        autoCorrect={false}
+        placeholderTextColor="#999"
+      />
 
       <Pressable
         style={[styles.button, running && styles.buttonDisabled]}
@@ -158,7 +208,9 @@ export default function DevUploads() {
 
 function Row({ item }: { item: UploadItem }) {
   const tags = item.result?.tags?.slice(0, 3).join(", ");
-  const quality = item.result?.info?.quality_analysis?.aggregate;
+  const quality =
+    item.result?.quality_analysis?.aggregate ??
+    item.result?.quality_analysis?.focus;
   return (
     <View style={styles.row}>
       <Image source={{ uri: item.localUri }} style={styles.thumb} />
@@ -213,7 +265,7 @@ function dotStyle(s: Status) {
 async function runWithLimit<T>(
   items: T[],
   limit: number,
-  fn: (item: T) => Promise<void>,
+  fn: (item: T) => Promise<unknown>,
 ) {
   let i = 0;
   async function worker() {
@@ -245,6 +297,15 @@ const styles = StyleSheet.create({
     color: "#666",
     marginBottom: 16,
     textAlign: "center",
+  },
+  albumInput: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 13,
+    marginBottom: 12,
   },
   button: {
     backgroundColor: "#000",
