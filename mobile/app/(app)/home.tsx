@@ -1,3 +1,4 @@
+import { Link } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { supabase } from "../../lib/supabase";
 
@@ -13,6 +14,10 @@ export default function Home() {
       >
         <Text style={styles.signOutText}>Sign Out</Text>
       </Pressable>
+
+      <Link href="/(app)/dev-uploads" style={styles.devLink}>
+        Dev: upload tester →
+      </Link>
     </View>
   );
 }
@@ -45,5 +50,10 @@ const styles = StyleSheet.create({
   signOutText: {
     fontSize: 14,
     color: "#666",
+  },
+  devLink: {
+    marginTop: 24,
+    fontSize: 12,
+    color: "#999",
   },
 });
