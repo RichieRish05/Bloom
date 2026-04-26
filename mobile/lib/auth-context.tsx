@@ -12,14 +12,14 @@ type AuthContextType = {
   session: Session | null;
   isLoading: boolean;
   isNewUser: boolean;
-  completeOnboarding: () => Promise<void>;
+  completeOnboarding: (handle: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType>({
   session: null,
   isLoading: true,
   isNewUser: false,
-  completeOnboarding: async () => {},
+  completeOnboarding: async (_handle: string) => {},
 });
 
 export function useAuth() {
@@ -78,11 +78,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  async function completeOnboarding() {
+  async function completeOnboarding(handle: string) {
     if (!session) return;
     const { error } = await supabase
       .from("profiles")
-      .upsert({ id: session.user.id, onboarded: true });
+      .upsert({ id: session.user.id, onboarded: true, handle });
     if (error) {
       throw error;
     }
