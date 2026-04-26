@@ -18,15 +18,27 @@ export default function SignIn() {
   const [loading, setLoading] = useState(false);
 
   async function handleAuth() {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail || !password) {
+      Alert.alert("Missing info", "Enter both email and password.");
+      return;
+    }
+    if (isSignUp && password.length < 6) {
+      Alert.alert("Weak password", "Password must be at least 6 characters.");
+      return;
+    }
+
     setLoading(true);
     const { error } = isSignUp
-      ? await supabase.auth.signUp({ email, password })
-      : await supabase.auth.signInWithPassword({ email, password });
-
+      ? await supabase.auth.signUp({ email: trimmedEmail, password })
+      : await supabase.auth.signInWithPassword({
+          email: trimmedEmail,
+          password,
+        });
+    setLoading(false);
     if (error) {
       Alert.alert("Error", error.message);
     }
-    setLoading(false);
   }
 
   return (
