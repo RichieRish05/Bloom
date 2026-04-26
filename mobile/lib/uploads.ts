@@ -14,6 +14,7 @@ export type CloudinaryUploadResult = {
   height: number;
   format: string;
   tags?: string[];
+  phash?: string;
   quality_analysis?: {
     focus?: number;
     aggregate?: number;
@@ -77,6 +78,8 @@ export type CommitImageInput = {
   height: number;
   format: string;
   quality_score?: number;
+  tags?: string[];
+  phash?: string;
 };
 
 export type CommitResult = {
@@ -91,6 +94,8 @@ export function toCommitInput(r: CloudinaryUploadResult): CommitImageInput {
     height: r.height,
     format: r.format,
     quality_score: r.quality_analysis?.aggregate ?? r.quality_analysis?.focus,
+    tags: r.tags ?? [],
+    phash: r.phash,
   };
 }
 

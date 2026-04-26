@@ -11,6 +11,8 @@ type ImageInput = {
   height: number;
   format: string;
   quality_score?: number;
+  tags?: string[];
+  phash?: string;
 };
 
 Deno.serve(async (req) => {
@@ -57,6 +59,8 @@ Deno.serve(async (req) => {
     height: img.height,
     format: img.format,
     quality_score: img.quality_score ?? null,
+    tags: img.tags ?? [],
+    phash: img.phash ?? null,
     uploader_id: user.id,
   }));
 
